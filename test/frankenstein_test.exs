@@ -85,20 +85,22 @@ defmodule FrankensteinTest do
       assert_received :candidate_called
     end
 
-    # test "candidate is not called when experiment is disabled" do
-    #   pid = self()
+    # TODO: need to use Observation instead of Result
+    @tag :skip
+    test "candidate is not called when experiment is disabled" do
+      pid = self()
 
-    #   experiment =
-    #     Frankenstein.Experiment.new(
-    #       ConfigurableExperiment,
-    #       control: fn -> 216 end,
-    #       candidate: fn -> send(pid, :candidate_called) end,
-    #       context: %{enabled: false}
-    #     )
+      experiment =
+        Frankenstein.Experiment.new(
+          ConfigurableExperiment,
+          control: fn -> 216 end,
+          candidate: fn -> send(pid, :candidate_called) end,
+          context: %{enabled: false}
+        )
 
-    #   Frankenstein.run(experiment)
+      Frankenstein.run(experiment)
 
-    #   refute_received :candidate_called
-    # end
+      refute_received :candidate_called
+    end
   end
 end
