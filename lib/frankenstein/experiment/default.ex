@@ -7,7 +7,7 @@ defmodule Frankenstein.Experiment.Default do
 
   @impl Frankenstein.Experiment
   def sample(_context) do
-    :rand.uniform() > 0.5
+    true
   end
 
   @impl Frankenstein.Experiment

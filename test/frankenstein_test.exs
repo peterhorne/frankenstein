@@ -3,28 +3,11 @@ defmodule FrankensteinTest do
   doctest Frankenstein
 
   describe "run/1" do
-    setup context do
-      # this is perhaps not the best way of doing things
-      defmodule TestExperiment do
-        # this is flaky now, mhm.
-        @behaviour Frankenstein.Experiment
-
-        defdelegate validate(context, results), to: Frankenstein.Experiment.Default
-        defdelegate publish(event_type, context, results), to: Frankenstein.Experiment.Default
-        def sample(_context), do: true
-      end
-
-      on_exit(fn -> purge(TestExperiment) end)
-
-      # :ok
-      [experiment: TestExperiment]
-    end
-
     # TODO: add a test to verify match
-    test "simple usage works", %{experiment: experiment} do
+    test "simple usage works" do
       experiment =
         Frankenstein.Experiment.new(
-          experiment,
+          Frankenstein.Experiment.Default,
           control: fn -> 215 + 1 end,
           candidate: fn -> 217 - 1 end
         )
@@ -32,10 +15,10 @@ defmodule FrankensteinTest do
       assert Frankenstein.run(experiment) == 216
     end
 
-    test "candidate crashes, should not affect control", %{experiment: experiment} do
+    test "candidate crashes, should not affect control" do
       experiment =
         Frankenstein.Experiment.new(
-          experiment,
+          Frankenstein.Experiment.Default,
           control: fn -> 216 end,
           candidate: fn -> raise RuntimeError, "candidate raised" end
         )
