@@ -3,8 +3,7 @@ defmodule FrankensteinTest do
   doctest Frankenstein
 
   describe "run/1" do
-    # TODO: add a test to verify match
-    test "simple usage works" do
+    test "control and candidate match" do
       experiment =
         Frankenstein.Experiment.new(
           Frankenstein.Experiment.Default,
@@ -13,6 +12,21 @@ defmodule FrankensteinTest do
         )
 
       assert Frankenstein.run(experiment) == 216
+
+      # TODO: assert telemetry
+    end
+
+    test "control and candidate don't match" do
+      experiment =
+        Frankenstein.Experiment.new(
+          Frankenstein.Experiment.Default,
+          control: fn -> 215 + 1 end,
+          candidate: fn -> 300 end
+        )
+
+      assert Frankenstein.run(experiment) == 216
+
+      # TODO: assert telemetry
     end
 
     test "candidate crashes, should not affect control" do
@@ -24,9 +38,11 @@ defmodule FrankensteinTest do
         )
 
       assert Frankenstein.run(experiment) == 216
+
+      # TODO: assert telemetry
     end
 
-    test "sample/1 would skip" do
+    test "candidate is only called when experiment is enabled" do
       defmodule SkippableExperiment do
         @behaviour Frankenstein.Experiment
 
