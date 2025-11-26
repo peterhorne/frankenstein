@@ -52,7 +52,7 @@ defmodule Frankenstein do
         control_result.value
 
       # TODO: render error nicely // move to behaviour
-      [{:ok, result}, {:exit, {error, stacktrace}}] ->
+      [{:ok, result}, {:exit, {error, _stacktrace}}] ->
         Logger.warning(
           "Candidate failed with error (#{error.__struct__}) #{inspect(error.message)}"
         )

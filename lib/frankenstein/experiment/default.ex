@@ -11,7 +11,7 @@ defmodule Frankenstein.Experiment.Default do
   end
 
   @impl Frankenstein.Experiment
-  def validate(context, {%Result{value: control}, %Result{value: candidate}}) do
+  def validate(_context, {%Result{value: control}, %Result{value: candidate}}) do
     if control == candidate do
       Logger.info("(#{__MODULE__}) match")
     else
@@ -21,7 +21,7 @@ defmodule Frankenstein.Experiment.Default do
 
   @impl Frankenstein.Experiment
   # TODO: publish timing results
-  def publish(:match, context, {%Result{}, %Result{}}) do
+  def publish(:match, _context, {%Result{}, %Result{}}) do
     # :telemetry.execute([:frankenstein, :experiment, :match], %{
     #     control: control_result,
     #     candidate: candidate_result

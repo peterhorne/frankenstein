@@ -20,7 +20,7 @@ defmodule Frankenstein.Experiment do
 
   # TODO: validate function arity with is_function/2
   # TODO: maybe refactor it to explicitly take in `{module \\ Default, opts}`?
-  def new(module \\ Frankenstein.Experiment.Default, opts) do
+  def new(module \\ Default, opts) do
     control = Keyword.fetch!(opts, :control)
     candidate = Keyword.fetch!(opts, :candidate)
     context = Keyword.get(opts, :context, %{})

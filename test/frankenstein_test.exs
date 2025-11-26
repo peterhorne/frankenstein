@@ -44,7 +44,7 @@ defmodule FrankensteinTest do
     end
 
     test "sample/1 would skip" do
-      defmodule TestExperiment do
+      defmodule SkippableExperiment do
         @behaviour Frankenstein.Experiment
 
         defdelegate validate(context, results), to: Frankenstein.Experiment.Default
@@ -59,7 +59,7 @@ defmodule FrankensteinTest do
 
       experiment =
         Frankenstein.Experiment.new(
-          TestExperiment,
+          SkippableExperiment,
           control: fn -> 216 end,
           candidate: fn -> flunk("should not be called") end,
           context: %{should_sample: false, pid: pid}
@@ -68,8 +68,8 @@ defmodule FrankensteinTest do
       assert Frankenstein.run(experiment) == 216
 
       assert_received {^pid, :skipped}
-      # after
-      # purge(TestExperiment)
+
+      purge(SkippableExperiment)
     end
 
     # Frankenstein.Experiment.new(TestExperiment, control:, candidate:, context: %{pid: self()})
