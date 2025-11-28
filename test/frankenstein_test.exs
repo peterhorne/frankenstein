@@ -127,7 +127,7 @@ defmodule FrankensteinTest do
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
                         experiment: :my_experiment,
-                        match?: false
+                        match?: nil
                       }}
     end
 
@@ -210,7 +210,7 @@ defmodule FrankensteinTest do
           Process.sleep(10)
           send(pid, :candidate_called)
         end,
-        timeout_ms: 5
+        timeout: 5
       }
 
       Frankenstein.run(experiment)
@@ -223,30 +223,11 @@ defmodule FrankensteinTest do
                         test: :control
                       }}
 
-      assert_receive {[:frankenstein, :experiment, :stop], _, _,
+      assert_receive {[:frankenstein, :test, :exception], _, _,
                       %{
                         experiment: :my_experiment,
-                        match?: false
-                      }}
-    end
-
-    test "control times out" do
-      experiment = %Experiment{
-        name: :my_experiment,
-        control: fn ->
-          Process.sleep(10)
-          215 + 1
-        end,
-        candidate: fn -> 100 + 100 + 16 end,
-        timeout_ms: 5
-      }
-
-      assert Frankenstein.run(experiment) == 216
-
-      assert_receive {[:frankenstein, :test, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        test: :candidate
+                        test: :candidate,
+                        reason: %Frankenstein.TimeoutError{message: "Test timed out after 5ms"}
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,

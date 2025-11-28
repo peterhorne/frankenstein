@@ -6,55 +6,26 @@ defmodule Frankenstein do
   require Logger
 
   alias Frankenstein.Experiment
-  alias Frankenstein.Publisher
-
-  @telemetry_prefix [:frankenstein]
+  alias Frankenstein.Lab
+  alias Frankenstein.Telemetry
 
   def run(%Experiment{enabled?: false} = experiment) do
     experiment.control.()
   end
 
   def run(%Experiment{enabled?: true} = experiment) do
-    publisher_pid =
-      spawn(fn -> Publisher.start(experiment) end)
+    pid = self()
 
-    spawn(fn ->
-      :timer.kill_after(experiment.timeout_ms)
-
-      try do
-        telemetry_metadata = %{experiment: experiment.name, test: :candidate}
-
-        value =
-          :telemetry.span(
-            @telemetry_prefix ++ [:test],
-            telemetry_metadata,
-            fn -> {experiment.candidate.(), telemetry_metadata} end
-          )
-
-        send(publisher_pid, {:candidate, {:ok, value}})
-      rescue
-        e ->
-          send(publisher_pid, {:candidate, {:error, e}})
-      end
-    end)
+    lab_pid =
+      spawn(fn -> Lab.start(experiment, pid) end)
 
     try do
-      telemetry_metadata = %{experiment: experiment.name, test: :control}
-
-      value =
-        :telemetry.span(
-          @telemetry_prefix ++ [:test],
-          telemetry_metadata,
-          fn ->
-            {experiment.control.(), telemetry_metadata}
-          end
-        )
-
-      send(publisher_pid, {:control, {:ok, value}})
+      value = Telemetry.span_test(experiment, :control, experiment.control)
+      send(lab_pid, {:control, {:ok, value}})
       value
     rescue
       e ->
-        send(publisher_pid, {:control, {:error, e}})
+        send(lab_pid, {:control, {:error, e}})
         reraise e, __STACKTRACE__
     end
   end
