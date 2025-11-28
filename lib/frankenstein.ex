@@ -14,10 +14,7 @@ defmodule Frankenstein do
   end
 
   def run(%Experiment{enabled?: true} = experiment) do
-    pid = self()
-
-    lab_pid =
-      spawn(fn -> Lab.start(experiment, pid) end)
+    lab_pid = Lab.start(experiment)
 
     try do
       value = Telemetry.span_test(experiment, :control, experiment.control)

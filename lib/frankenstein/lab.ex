@@ -1,13 +1,17 @@
 defmodule Frankenstein.Lab do
   alias Frankenstein.Telemetry
 
-  def start(experiment, parent_pid) do
-    Process.monitor(parent_pid)
+  def start(experiment) do
+    pid = self()
 
-    Telemetry.span_experiment(experiment, fn ->
-      candidate = run_candidate(experiment)
-      control = listen_for_control()
-      compare(control, candidate, experiment.compare)
+    spawn(fn ->
+      Process.monitor(pid)
+
+      Telemetry.span_experiment(experiment, fn ->
+        candidate = run_candidate(experiment)
+        control = listen_for_control()
+        compare(control, candidate, experiment.compare)
+      end)
     end)
   end
 
