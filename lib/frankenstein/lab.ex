@@ -31,10 +31,10 @@ defmodule Frankenstein.Lab do
     end
   end
 
-  defp compare(control = {:ok, _}, candidate = {:ok, _}, comparison_fn),
+  defp compare({:ok, _} = control, {:ok, _} = candidate, comparison_fn),
     do: comparison_fn.(control, candidate)
 
-  defp compare({:ok, _}, {:error, _}, _), do: false
+  defp compare({:ok, _} = _control, {:error, _} = _candidate, _), do: false
 
   defp compare(_, _, _), do: nil
 
