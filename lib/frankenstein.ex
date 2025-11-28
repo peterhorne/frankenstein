@@ -8,18 +8,39 @@ defmodule Frankenstein do
   alias Frankenstein.Experiment
   alias Frankenstein.Publisher
 
+  @telemetry_prefix [:frankenstein]
+
   def run(%Experiment{enabled?: false} = experiment) do
     experiment.control.()
   end
 
   def run(%Experiment{enabled?: true} = experiment) do
-    publisher_pid = spawn(Publisher, :listen, [experiment])
+    publisher_pid =
+      spawn(fn ->
+        try do
+          Publisher.start(experiment)
+        rescue
+          e ->
+            # TODO
+            IO.inspect(e)
+        end
+      end)
 
     spawn(fn ->
       :timer.kill_after(experiment.timeout_ms)
 
       try do
-        value = experiment.candidate.()
+        telemetry_metadata = %{experiment: experiment.name, test: :candidate}
+
+        value =
+          :telemetry.span(
+            @telemetry_prefix ++ [:test],
+            telemetry_metadata,
+            fn ->
+              {experiment.candidate.(), telemetry_metadata}
+            end
+          )
+
         send(publisher_pid, {:candidate, {:ok, value}})
       rescue
         e ->
@@ -28,7 +49,17 @@ defmodule Frankenstein do
     end)
 
     try do
-      value = experiment.control.()
+      telemetry_metadata = %{experiment: experiment.name, test: :control}
+
+      value =
+        :telemetry.span(
+          @telemetry_prefix ++ [:test],
+          telemetry_metadata,
+          fn ->
+            {experiment.control.(), telemetry_metadata}
+          end
+        )
+
       send(publisher_pid, {:control, {:ok, value}})
       value
     rescue
