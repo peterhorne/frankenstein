@@ -3,11 +3,10 @@ defmodule Frankenstein.TimeoutError do
   Returned when a test is terminated early due to a custom timeout.
   """
 
-  defexception [:message]
+  defexception [:timeout_ms]
 
   @impl true
-  def exception(timeout) do
-    message = "Test timed out after #{timeout}ms"
-    %__MODULE__{message: message}
+  def message(%__MODULE__{timeout_ms: timeout_ms}) do
+    "Test timed out after #{timeout_ms}ms"
   end
 end

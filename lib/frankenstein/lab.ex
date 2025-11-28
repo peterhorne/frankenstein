@@ -57,7 +57,7 @@ defmodule Frankenstein.Lab do
 
       nil ->
         Task.shutdown(task)
-        raise Frankenstein.TimeoutError.exception(timeout)
+        raise Frankenstein.TimeoutError.exception(timeout_ms: timeout)
     end
   end
 end

@@ -227,7 +227,7 @@ defmodule FrankensteinTest do
                       %{
                         experiment: :my_experiment,
                         test: :candidate,
-                        reason: %Frankenstein.TimeoutError{message: "Test timed out after 5ms"}
+                        reason: %Frankenstein.TimeoutError{timeout_ms: 5}
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
