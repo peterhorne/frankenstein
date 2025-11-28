@@ -16,15 +16,7 @@ defmodule Frankenstein do
 
   def run(%Experiment{enabled?: true} = experiment) do
     publisher_pid =
-      spawn(fn ->
-        try do
-          Publisher.start(experiment)
-        rescue
-          e ->
-            # TODO
-            IO.inspect(e)
-        end
-      end)
+      spawn(fn -> Publisher.start(experiment) end)
 
     spawn(fn ->
       :timer.kill_after(experiment.timeout_ms)
@@ -36,9 +28,7 @@ defmodule Frankenstein do
           :telemetry.span(
             @telemetry_prefix ++ [:test],
             telemetry_metadata,
-            fn ->
-              {experiment.candidate.(), telemetry_metadata}
-            end
+            fn -> {experiment.candidate.(), telemetry_metadata} end
           )
 
         send(publisher_pid, {:candidate, {:ok, value}})
