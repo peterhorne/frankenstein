@@ -1,5 +1,7 @@
 # Frankenstein
 
+![logo](./frankenstein.png)
+
 A port of Ruby's `scientist` to help you refactor with confidence.
 
 # Usage
