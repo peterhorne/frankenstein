@@ -1,90 +1,240 @@
 defmodule FrankensteinTest do
-  use ExUnit.Case, async: true
-  doctest Frankenstein
+  use ExUnit.Case, async: false
 
-  describe "run/1" do
-    setup context do
-      # this is perhaps not the best way of doing things
-      defmodule TestExperiment do
-        # this is flaky now, mhm.
-        @behaviour Frankenstein.Experiment
+  alias Frankenstein.Experiment
 
-        defdelegate validate(context, results), to: Frankenstein.Experiment.Default
-        defdelegate publish(event_type, context, results), to: Frankenstein.Experiment.Default
-        def sample(_context), do: true
-      end
+  setup do
+    ref =
+      :telemetry_test.attach_event_handlers(self(), [
+        [:frankenstein, :experiment, :stop],
+        [:frankenstein, :test, :stop],
+        [:frankenstein, :test, :exception]
+      ])
 
-      on_exit(fn -> purge(TestExperiment) end)
+    on_exit(fn -> :telemetry.detach(ref) end)
 
-      # :ok
-      [experiment: TestExperiment]
-    end
-
-    # TODO: add a test to verify match
-    test "simple usage works", %{experiment: experiment} do
-      experiment =
-        Frankenstein.Experiment.new(
-          experiment,
-          control: fn -> 215 + 1 end,
-          candidate: fn -> 217 - 1 end
-        )
-
-      assert Frankenstein.run(experiment) == 216
-    end
-
-    test "candidate crashes, should not affect control", %{experiment: experiment} do
-      experiment =
-        Frankenstein.Experiment.new(
-          experiment,
-          control: fn -> 216 end,
-          candidate: fn -> raise RuntimeError, "candidate raised" end
-        )
-
-      assert Frankenstein.run(experiment) == 216
-    end
-
-    test "sample/1 would skip" do
-      defmodule TestExperiment do
-        @behaviour Frankenstein.Experiment
-
-        defdelegate validate(context, results), to: Frankenstein.Experiment.Default
-        defdelegate publish(event_type, context, results), to: Frankenstein.Experiment.Default
-
-        def sample(context) do
-          context.should_sample || send(context.pid, {context.pid, :skipped})
-        end
-      end
-
-      pid = self()
-
-      experiment =
-        Frankenstein.Experiment.new(
-          TestExperiment,
-          control: fn -> 216 end,
-          candidate: fn -> flunk("should not be called") end,
-          context: %{should_sample: false, pid: pid}
-        )
-
-      assert Frankenstein.run(experiment) == 216
-
-      assert_received {^pid, :skipped}
-      # after
-      # purge(TestExperiment)
-    end
-
-    # Frankenstein.Experiment.new(TestExperiment, control:, candidate:, context: %{pid: self()})
-
-    # test "experiment takes too long" do
-    #   assert Frankenstein.run(
-    #            control: fn -> 216 end,
-    #            # TODO: change it to a smaller timeout in test
-    #            candidate: fn -> Process.sleep(5_001) end
-    #          ) == 216
-    # end
+    :ok
   end
 
-  defp purge(module) do
-    :code.purge(module)
-    :code.delete(module)
+  describe "run/1" do
+    test "candidate matches control" do
+      experiment = %Experiment{
+        name: :my_experiment,
+        control: fn -> 215 + 1 end,
+        candidate: fn -> 217 - 1 end
+      }
+
+      assert Frankenstein.run(experiment) == 216
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :control
+                      }}
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :candidate
+                      }}
+
+      assert_receive {[:frankenstein, :experiment, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        match?: true
+                      }}
+    end
+
+    test "candidate doesn't match control" do
+      experiment = %Experiment{
+        name: :my_experiment,
+        control: fn -> 215 + 1 end,
+        candidate: fn -> 300 end
+      }
+
+      assert Frankenstein.run(experiment) == 216
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :control
+                      }}
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :candidate
+                      }}
+
+      assert_receive {[:frankenstein, :experiment, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        match?: false
+                      }}
+    end
+
+    test "candidate raises an error" do
+      experiment = %Experiment{
+        name: :my_experiment,
+        control: fn -> 215 + 1 end,
+        candidate: fn -> raise "borked" end
+      }
+
+      assert Frankenstein.run(experiment) == 216
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :control
+                      }}
+
+      assert_receive {[:frankenstein, :test, :exception], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :candidate,
+                        reason: %RuntimeError{message: "borked"}
+                      }}
+
+      assert_receive {[:frankenstein, :experiment, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        match?: false
+                      }}
+    end
+
+    test "control raises an error" do
+      experiment = %Experiment{
+        name: :my_experiment,
+        control: fn -> raise "borked" end,
+        candidate: fn -> 432 / 2 end
+      }
+
+      assert_raise RuntimeError, fn -> Frankenstein.run(experiment) end
+
+      assert_receive {[:frankenstein, :test, :exception], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :control,
+                        reason: %RuntimeError{message: "borked"}
+                      }}
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :candidate
+                      }}
+
+      assert_receive {[:frankenstein, :experiment, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        match?: nil
+                      }}
+    end
+
+    test "experiment is enabled" do
+      pid = self()
+
+      experiment = %Experiment{
+        name: :my_experiment,
+        control: fn -> 216 end,
+        candidate: fn ->
+          send(pid, :candidate_called)
+          108 * 2
+        end,
+        enabled?: true
+      }
+
+      Frankenstein.run(experiment)
+
+      assert_receive :candidate_called, 1
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :control
+                      }}
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :candidate
+                      }}
+
+      assert_receive {[:frankenstein, :experiment, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        match?: true
+                      }}
+    end
+
+    test "experiment is disabled" do
+      pid = self()
+
+      experiment = %Experiment{
+        name: :my_experiment,
+        control: fn -> 216 end,
+        candidate: fn -> send(pid, :candidate_called) end,
+        enabled?: false
+      }
+
+      Frankenstein.run(experiment)
+
+      refute_receive :candidate_called, 1
+
+      refute_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :control
+                      }}
+
+      refute_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :candidate
+                      }}
+
+      refute_receive {[:frankenstein, :experiment, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        match?: true
+                      }}
+    end
+
+    test "candidate times out" do
+      pid = self()
+
+      experiment = %Experiment{
+        name: :my_experiment,
+        control: fn -> 215 + 1 end,
+        candidate: fn ->
+          Process.sleep(10)
+          send(pid, :candidate_called)
+        end,
+        timeout: 5
+      }
+
+      Frankenstein.run(experiment)
+
+      refute_receive :candidate_called, 20
+
+      assert_receive {[:frankenstein, :test, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :control
+                      }}
+
+      assert_receive {[:frankenstein, :test, :exception], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        test: :candidate,
+                        reason: %Frankenstein.TimeoutError{timeout_ms: 5}
+                      }}
+
+      assert_receive {[:frankenstein, :experiment, :stop], _, _,
+                      %{
+                        experiment: :my_experiment,
+                        match?: false
+                      }}
+    end
   end
 end
