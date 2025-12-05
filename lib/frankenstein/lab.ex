@@ -6,12 +6,10 @@ defmodule Frankenstein.Lab do
 
     spawn(fn ->
       Process.monitor(pid)
-
-      Telemetry.span_experiment(experiment, fn ->
-        candidate = run_candidate(experiment)
-        control = listen_for_control()
-        compare(control, candidate, experiment.compare)
-      end)
+      candidate = run_candidate(experiment)
+      control = listen_for_control()
+      match? = compare(control, candidate, experiment.compare)
+      Telemetry.publish_result(experiment, match?)
     end)
   end
 

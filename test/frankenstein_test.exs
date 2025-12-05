@@ -6,7 +6,7 @@ defmodule FrankensteinTest do
   setup do
     ref =
       :telemetry_test.attach_event_handlers(self(), [
-        [:frankenstein, :experiment, :stop],
+        [:frankenstein, :experiment],
         [:frankenstein, :test, :stop],
         [:frankenstein, :test, :exception]
       ])
@@ -38,11 +38,8 @@ defmodule FrankensteinTest do
                         test: :candidate
                       }}
 
-      assert_receive {[:frankenstein, :experiment, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        match: true
-                      }}
+      assert_receive {[:frankenstein, :experiment], _, %{match: true},
+                      %{experiment: :my_experiment}}
     end
 
     test "candidate doesn't match control" do
@@ -66,11 +63,8 @@ defmodule FrankensteinTest do
                         test: :candidate
                       }}
 
-      assert_receive {[:frankenstein, :experiment, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        match: false
-                      }}
+      assert_receive {[:frankenstein, :experiment], _, %{match: false},
+                      %{experiment: :my_experiment}}
     end
 
     test "candidate raises an error" do
@@ -95,11 +89,8 @@ defmodule FrankensteinTest do
                         reason: %RuntimeError{message: "borked"}
                       }}
 
-      assert_receive {[:frankenstein, :experiment, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        match: false
-                      }}
+      assert_receive {[:frankenstein, :experiment], _, %{match: false},
+                      %{experiment: :my_experiment}}
     end
 
     test "control raises an error" do
@@ -124,11 +115,8 @@ defmodule FrankensteinTest do
                         test: :candidate
                       }}
 
-      assert_receive {[:frankenstein, :experiment, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        match: nil
-                      }}
+      assert_receive {[:frankenstein, :experiment], _, %{match: nil},
+                      %{experiment: :my_experiment}}
     end
 
     test "experiment is enabled" do
@@ -160,11 +148,8 @@ defmodule FrankensteinTest do
                         test: :candidate
                       }}
 
-      assert_receive {[:frankenstein, :experiment, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        match: true
-                      }}
+      assert_receive {[:frankenstein, :experiment], _, %{match: true},
+                      %{experiment: :my_experiment}}
     end
 
     test "experiment is disabled" do
@@ -193,11 +178,8 @@ defmodule FrankensteinTest do
                         test: :candidate
                       }}
 
-      refute_receive {[:frankenstein, :experiment, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        match: true
-                      }}
+      refute_receive {[:frankenstein, :experiment], _, %{match: true},
+                      %{experiment: :my_experiment}}
     end
 
     test "candidate times out" do
@@ -230,11 +212,8 @@ defmodule FrankensteinTest do
                         reason: %Frankenstein.TimeoutError{timeout_ms: 5}
                       }}
 
-      assert_receive {[:frankenstein, :experiment, :stop], _, _,
-                      %{
-                        experiment: :my_experiment,
-                        match: false
-                      }}
+      assert_receive {[:frankenstein, :experiment], _, %{match: false},
+                      %{experiment: :my_experiment}}
     end
   end
 end

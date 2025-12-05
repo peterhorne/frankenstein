@@ -1,18 +1,11 @@
 defmodule Frankenstein.Telemetry do
   @telemetry_prefix [:frankenstein]
 
-  def span_experiment(experiment, f) do
+  def publish_result(experiment, match) do
     metadata = %{experiment: experiment.name}
-
-    :telemetry.span(
-      @telemetry_prefix ++ [:experiment],
-      metadata,
-      fn ->
-        match? = f.()
-        metadata = Map.put(metadata, :match, match?)
-        {match?, metadata}
-      end
-    )
+    event_name = @telemetry_prefix ++ [:experiment]
+    measurements = %{match: match}
+    :telemetry.execute(event_name, measurements, metadata)
   end
 
   def span_test(experiment, test_name, f) do
