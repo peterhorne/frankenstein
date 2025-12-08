@@ -17,7 +17,7 @@ defmodule Frankenstein do
     lab_pid = Lab.start(experiment)
 
     try do
-      value = Telemetry.span_test(experiment, :control, experiment.control)
+      value = Telemetry.span_variant(experiment, :control, experiment.control)
       send(lab_pid, {:control, {:ok, value}})
       value
     rescue

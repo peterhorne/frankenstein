@@ -7,8 +7,8 @@ defmodule FrankensteinTest do
     ref =
       :telemetry_test.attach_event_handlers(self(), [
         [:frankenstein, :experiment, :stop],
-        [:frankenstein, :test, :stop],
-        [:frankenstein, :test, :exception]
+        [:frankenstein, :variant, :stop],
+        [:frankenstein, :variant, :exception]
       ])
 
     on_exit(fn -> :telemetry.detach(ref) end)
@@ -26,21 +26,21 @@ defmodule FrankensteinTest do
 
       assert Frankenstein.run(experiment) == 216
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :control
+                        experiment_name: :my_experiment,
+                        variant_name: :control
                       }}
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :candidate
+                        experiment_name: :my_experiment,
+                        variant_name: :candidate
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
+                        experiment_name: :my_experiment,
                         match: true
                       }}
     end
@@ -54,21 +54,21 @@ defmodule FrankensteinTest do
 
       assert Frankenstein.run(experiment) == 216
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :control
+                        experiment_name: :my_experiment,
+                        variant_name: :control
                       }}
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :candidate
+                        experiment_name: :my_experiment,
+                        variant_name: :candidate
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
+                        experiment_name: :my_experiment,
                         match: false
                       }}
     end
@@ -82,22 +82,22 @@ defmodule FrankensteinTest do
 
       assert Frankenstein.run(experiment) == 216
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :control
+                        experiment_name: :my_experiment,
+                        variant_name: :control
                       }}
 
-      assert_receive {[:frankenstein, :test, :exception], _, _,
+      assert_receive {[:frankenstein, :variant, :exception], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :candidate,
+                        experiment_name: :my_experiment,
+                        variant_name: :candidate,
                         reason: %RuntimeError{message: "borked"}
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
+                        experiment_name: :my_experiment,
                         match: false
                       }}
     end
@@ -111,22 +111,22 @@ defmodule FrankensteinTest do
 
       assert_raise RuntimeError, fn -> Frankenstein.run(experiment) end
 
-      assert_receive {[:frankenstein, :test, :exception], _, _,
+      assert_receive {[:frankenstein, :variant, :exception], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :control,
+                        experiment_name: :my_experiment,
+                        variant_name: :control,
                         reason: %RuntimeError{message: "borked"}
                       }}
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :candidate
+                        experiment_name: :my_experiment,
+                        variant_name: :candidate
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
+                        experiment_name: :my_experiment,
                         match: nil
                       }}
     end
@@ -148,21 +148,21 @@ defmodule FrankensteinTest do
 
       assert_receive :candidate_called, 1
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :control
+                        experiment_name: :my_experiment,
+                        variant_name: :control
                       }}
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :candidate
+                        experiment_name: :my_experiment,
+                        variant_name: :candidate
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
+                        experiment_name: :my_experiment,
                         match: true
                       }}
     end
@@ -181,21 +181,21 @@ defmodule FrankensteinTest do
 
       refute_receive :candidate_called, 1
 
-      refute_receive {[:frankenstein, :test, :stop], _, _,
+      refute_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :control
+                        experiment_name: :my_experiment,
+                        variant_name: :control
                       }}
 
-      refute_receive {[:frankenstein, :test, :stop], _, _,
+      refute_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :candidate
+                        experiment_name: :my_experiment,
+                        variant_name: :candidate
                       }}
 
       refute_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
+                        experiment_name: :my_experiment,
                         match: true
                       }}
     end
@@ -217,22 +217,22 @@ defmodule FrankensteinTest do
 
       refute_receive :candidate_called, 20
 
-      assert_receive {[:frankenstein, :test, :stop], _, _,
+      assert_receive {[:frankenstein, :variant, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :control
+                        experiment_name: :my_experiment,
+                        variant_name: :control
                       }}
 
-      assert_receive {[:frankenstein, :test, :exception], _, _,
+      assert_receive {[:frankenstein, :variant, :exception], _, _,
                       %{
-                        experiment: :my_experiment,
-                        test: :candidate,
+                        experiment_name: :my_experiment,
+                        variant_name: :candidate,
                         reason: %Frankenstein.TimeoutError{timeout_ms: 5}
                       }}
 
       assert_receive {[:frankenstein, :experiment, :stop], _, _,
                       %{
-                        experiment: :my_experiment,
+                        experiment_name: :my_experiment,
                         match: false
                       }}
     end
